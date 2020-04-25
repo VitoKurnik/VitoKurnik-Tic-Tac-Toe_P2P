@@ -19,8 +19,6 @@
       return [7, 56, 448, 73, 146, 292, 273, 84];
     }
 
-    // Nastavi bit izvedene poteze
-    // tileValue - Bitmask, ki nastavi vrednost zadnje izvedene poteze.
     updatePlaysArr(tileValue) {
       this.playsArr += tileValue;
     }
@@ -29,10 +27,10 @@
       return this.playsArr;
     }
 
-    // Nastavi currentTurn za igralca, ki je na vrsti - osvezi tudi UI.
+    // Sets currentTurn for player - refreshes the UI.
     setCurrentTurn(turn) {
       this.currentTurn = turn;
-      const message = turn ? 'Na vrsti si' : 'Cakam nasprotnika';
+      const message = turn ? 'Your turn' : 'Waiting for opponent';
       $('#turn').text(message);
     }
 
@@ -49,7 +47,7 @@
     }
   }
 
-  // roomId - id sobe kjer se igra odvija
+  // roomId - id of the room
   class Game {
     constructor(roomId) {
       this.roomId = roomId;
@@ -57,18 +55,18 @@
       this.moves = 0;
     }
 
-    // ustvari polje za igro, doda event listenerje na gumbe
+    // creates the game board, adds event listeners to buttons
     createGameBoard() {
       function tileClickHandler() {
         const row = parseInt(this.id.split('_')[1][0], 10);
         const col = parseInt(this.id.split('_')[1][1], 10);
         if (!player.getCurrentTurn() || !game) {
-          alert('Nisi na vrsti!');
+          alert('Not your turn!');
           return;
         }
 
         if ($(this).prop('disabled')) {
-          alert('To polje je ze zasedeno!');
+          alert('Already taken!');
           return;
         }
 
@@ -89,7 +87,7 @@
         }
       }
     }
-    // Odstrani meni, izrise polje in pozdravi igralca
+    // Removes the menu, outputs the game board and says hello to the player
     displayBoard(message) {
       $('.menu').css('display', 'none');
       $('.gameBoard').css('display', 'block');
@@ -97,12 +95,12 @@
       this.createGameBoard();
     }
     /**
-     * Osvezi UI
+     * UI refresh
      *
-     * @param {string} type tip igralca(X or O)
-     * @param {int} row vrstica, kjer je bila izvedena poteza
-     * @param {int} col stolpec, kjer je bila izvedena poteza
-     * @param {string} tile id kliknjenega tile-a (kvadratka)
+     * @param {string} type player type (X or O)
+     * @param {int} row row in which the move was made
+     * @param {int} col column in which the move was made
+     * @param {string} tile id of the selected tile (kvadratka)
      */
     updateBoard(type, row, col, tile) {
       $(`#${tile}`).text(type).prop('disabled', true);
@@ -114,11 +112,11 @@
       return this.roomId;
     }
 
-    // poslji update nasprotniku, da se mu osvezi UI
+    // send update to the opponent to refresh his UI
     playTurn(tile) {
       const clickedTile = $(tile).attr('id');
 
-      // Emitaj event da se drugemu igralcu sporoci, da si opravil svojo potezo.
+      // emits the event in lets the other player know you've made your move
       socket.emit('playTurn', {
         tile: clickedTile,
         room: this.getRoomId(),
@@ -146,7 +144,7 @@
         }
       });
 
-      const tieMessage = 'Neodloceno :(';
+      const tieMessage = 'Draw :(';
       if (this.checkTie()) {
         socket.emit('gameEnded', {
           room: this.getRoomId(),
@@ -161,10 +159,10 @@
       return this.moves >= 9;
     }
 
-    // Razglasi zamgovalca ce je trenutni client zmagal.
-    // Broadcastaj to v sobi, da drugi igralec ve, da je nasprotnik zmagal.
+    // announces the winner of the current client has won
+    // broadcasts to the room and let the other player know
     announceWinner() {
-      const message = `${player.getPlayerName()} je zmagal!`;
+      const message = `${player.getPlayerName()} has won!`;
       socket.emit('gameEnded', {
         room: this.getRoomId(),
         message,
@@ -173,14 +171,14 @@
       location.reload();
     }
 
-    // Koncaj igro ce je drugi igralec zmagal.
+    // ends the game if the other player has won
     endGame(message) {
       alert(message);
       location.reload();
     }
   }
 
-  // Ustvari novo igro. Emitaj newGame event.
+  // creates new game
   $('#new').on('click', () => {
     const name = $('#nameNew').val();
     if (!name) {
@@ -191,7 +189,7 @@
     player = new Player(name, P1);
   });
 
-  // Pridruzi se obstojeci sobi z vnosom roomId. Emitaj joinGame event.
+  // joins a room
   $('#join').on('click', () => {
     const name = $('#nameJoin').val();
     const roomID = $('#room').val();
@@ -203,31 +201,22 @@
     player = new Player(name, P2);
   });
 
-  // Novo igro je ustvaril trenutni client. Osvezi UI in ustvari novi Game var.
   socket.on('newGame', (data) => {
     const message =
       `Pozdravljen, ${data.name}. Nasportnik naj vnese ID:
       ${data.room}. Cakam nasprotnika...`;
 
-    // Ustvari igro za igralca 1
+    // creates game for player 1
     game = new Game(data.room);
     game.displayBoard(message);
   });
 
-  /**
-	 * Ce igralec ustvari igro, bo P1(X) in bo prvi na vrsti.
-	 * Ta event se prejme ko se nasprotnik pridruzi v sobo.
-	 */
   socket.on('player1', (data) => {
     const message = `Pozdravljen, ${player.getPlayerName()}`;
     $('#userHello').html(message);
     player.setCurrentTurn(true);
   });
 
-  /**
-	 * Pridruzitev k igri, zato je igralec P2(O).
-	 * Event se prejme, ko se P2 uspesno pridruzi igri.
-	 */
   socket.on('player2', (data) => {
     const message = `Pozdravljen, ${data.name}`;
 
@@ -237,10 +226,6 @@
     player.setCurrentTurn(false);
   });
 
-  /**
-	 * Nasprotnik je izvedel potezo. Osvezi UI.
-	 * Trenutni igralec je na vrsti.
-	 */
   socket.on('turnPlayed', (data) => {
     const row = data.tile.split('_')[1][0];
     const col = data.tile.split('_')[1][1];
@@ -250,15 +235,11 @@
     player.setCurrentTurn(true);
   });
 
-  // Ce drugi igralec zmaga, se prejme ta event. Obvesti igralca, da je igra koncana.
   socket.on('gameEnd', (data) => {
     game.endGame(data.message);
     socket.leave(data.room);
   });
 
-  /**
-	 * Koncaj igro na bilo katerem err eventu.
-	 */
   socket.on('err', (data) => {
     game.endGame(data.message);
   });

@@ -15,13 +15,13 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
 
-    // Ustvari novo sobo in obvesti njenega kreatorja
+    // creates a room and notifies the creator
     socket.on('createGame', (data) => {
         socket.join(`room-${++rooms}`);
         socket.emit('newGame', { name: data.name, room: `room-${rooms}` });
     });
 
-    // Poveze drugega igralca na zahtevano sobo. Izpise napako ce je polna.
+    // connects another player to a room, displays error if the room is full
     socket.on('joinGame', function (data) {
         var room = io.nsps['/'].adapter.rooms[data.room];
         if (room && room.length === 1) {
@@ -34,7 +34,7 @@ io.on('connection', (socket) => {
     });
 
     /**
-       * Obvesti, kdo je na vrsti
+       * tells whose turn it is
        */
     socket.on('playTurn', (data) => {
         socket.broadcast.to(data.room).emit('turnPlayed', {
@@ -44,7 +44,7 @@ io.on('connection', (socket) => {
     });
 
     /**
-       * Obvesti igralce o zmagovalcu.
+       * notifies the players who won
        */
     socket.on('gameEnded', (data) => {
         socket.broadcast.to(data.room).emit('gameEnd', data);
