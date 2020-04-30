@@ -9,7 +9,7 @@
   "author": "Vito Kurnik",
   "dependencies": {
     "express": "^4.14.0",
-    "jquery": "^3.1.1",
+    "jquery": "^3.5.0",
     "skeleton-css": "^2.0.4",
     "socket.io": "^1.7.1"
   }
